@@ -33,18 +33,70 @@ export default function EventCampaignPage() {
 
   const selectedEventData = cmsEvents.find((event) => event.id === selectedEvent)
 
-  const handleTestSend = () => {
-    console.log("Enviando mensaje de prueba del evento...")
+  const handleTestSend = async () => {
+    console.log('[CLIENT] Iniciando envío de prueba')
+    try {
+      console.log('[CLIENT] Enviando fetch a /api/send-template')
+      const response = await fetch('/api/send-template', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ to: '51993800154' }), // Número de prueba
+      })
+
+      console.log('[CLIENT] Respuesta del fetch:', response.status, response.statusText)
+
+      const result = await response.json()
+      console.log('[CLIENT] Resultado JSON:', result)
+
+      if (result.success) {
+        alert('Mensaje de prueba enviado exitosamente')
+        console.log('Resultado:', result.data)
+      } else {
+        alert('Error al enviar mensaje de prueba: ' + result.error)
+        console.error('Error del servidor:', result.error)
+      }
+    } catch (error) {
+      console.error('[CLIENT] Error en el fetch:', error)
+      alert('Error al enviar mensaje de prueba: ' + (error instanceof Error ? error.message : String(error)))
+    }
   }
 
   const handleSendCampaign = () => {
     setShowConfirmDialog(true)
   }
 
-  const confirmSendCampaign = () => {
+  const confirmSendCampaign = async () => {
     setShowConfirmDialog(false)
-    const recipientCount = 2450
-    router.push(`/campana-enviada?recipients=${recipientCount}&name=${encodeURIComponent(campaignName)}`)
+
+    try {
+      console.log('[CLIENT] Iniciando envío de campaña')
+      const response = await fetch('/api/send-template', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ to: '51993800154' }), // Por ahora envía a un número de prueba
+      })
+
+      console.log('[CLIENT] Respuesta del fetch:', response.status, response.statusText)
+
+      const result = await response.json()
+      console.log('[CLIENT] Resultado JSON:', result)
+
+      if (result.success) {
+        console.log('Resultado:', result.data)
+        const recipientCount = 2450
+        router.push(`/campana-enviada?recipients=${recipientCount}&name=${encodeURIComponent(campaignName)}`)
+      } else {
+        alert('Error al enviar campaña: ' + result.error)
+        console.error('Error del servidor:', result.error)
+      }
+    } catch (error) {
+      console.error('[CLIENT] Error en el fetch:', error)
+      alert('Error al enviar campaña: ' + (error instanceof Error ? error.message : String(error)))
+    }
   }
 
   return (
