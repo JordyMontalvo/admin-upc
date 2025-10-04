@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -30,8 +30,30 @@ export default function EventCampaignPage() {
   const [selectedEvent, setSelectedEvent] = useState("")
   const [campaignName, setCampaignName] = useState("")
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [isSending, setIsSending] = useState(false)
+  const [recipientCount, setRecipientCount] = useState(0)
+  const [loadingCount, setLoadingCount] = useState(true)
 
   const selectedEventData = cmsEvents.find((event) => event.id === selectedEvent)
+
+  // Fetch recipient count on component mount
+  useEffect(() => {
+    const fetchRecipientCount = async () => {
+      try {
+        const response = await fetch('/api/contacts/count')
+        if (response.ok) {
+          const data = await response.json()
+          setRecipientCount(data.totalContacts || 0)
+        }
+      } catch (error) {
+        console.error('Error fetching recipient count:', error)
+      } finally {
+        setLoadingCount(false)
+      }
+    }
+
+    fetchRecipientCount()
+  }, [])
 
   const handleTestSend = async () => {
     console.log('[CLIENT] Iniciando envío de prueba')
@@ -68,16 +90,16 @@ export default function EventCampaignPage() {
   }
 
   const confirmSendCampaign = async () => {
-    setShowConfirmDialog(false)
+    setIsSending(true)
 
     try {
-      console.log('[CLIENT] Iniciando envío de campaña')
+      console.log('[CLIENT] Iniciando envío de campaña a todos los contactos registrados')
       const response = await fetch('/api/send-template', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ to: '51993800154' }), // Por ahora envía a un número de prueba
+        body: JSON.stringify({}), // No necesitamos parámetros específicos
       })
 
       console.log('[CLIENT] Respuesta del fetch:', response.status, response.statusText)
@@ -86,16 +108,20 @@ export default function EventCampaignPage() {
       console.log('[CLIENT] Resultado JSON:', result)
 
       if (result.success) {
-        console.log('Resultado:', result.data)
-        const recipientCount = 2450
+        console.log('Campaña enviada:', result.summary)
+        const recipientCount = result.summary.success
         router.push(`/campana-enviada?recipients=${recipientCount}&name=${encodeURIComponent(campaignName)}`)
       } else {
         alert('Error al enviar campaña: ' + result.error)
         console.error('Error del servidor:', result.error)
+        setIsSending(false)
+        setShowConfirmDialog(false)
       }
     } catch (error) {
       console.error('[CLIENT] Error en el fetch:', error)
       alert('Error al enviar campaña: ' + (error instanceof Error ? error.message : String(error)))
+      setIsSending(false)
+      setShowConfirmDialog(false)
     }
   }
 
@@ -219,7 +245,9 @@ export default function EventCampaignPage() {
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Destinatarios:</span>
-                  <span className="font-medium">2,450 usuarios</span>
+                  <span className="font-medium">
+                    {loadingCount ? 'Cargando...' : `${recipientCount} ${recipientCount === 1 ? 'usuario' : 'usuarios'}`}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Costo estimado:</span>
@@ -236,15 +264,37 @@ export default function EventCampaignPage() {
           <DialogHeader>
             <DialogTitle>Confirmar envío de campaña</DialogTitle>
             <DialogDescription>
-              ¿Estás seguro de que deseas enviar la campaña "{campaignName}" a 2,450 usuarios registrados? Esta acción
-              no se puede deshacer.
+              {isSending ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  <span>Enviando campaña a todos los contactos...</span>
+                </div>
+              ) : (
+                `¿Estás seguro de que deseas enviar la campaña "${campaignName}" a ${recipientCount} ${recipientCount === 1 ? 'contacto registrado' : 'contactos registrados'}? Esta acción no se puede deshacer.`
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmDialog(false)}
+              disabled={isSending}
+            >
               Cancelar
             </Button>
-            <Button onClick={confirmSendCampaign}>Confirmar envío</Button>
+            <Button
+              onClick={confirmSendCampaign}
+              disabled={isSending}
+            >
+              {isSending ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Enviando...</span>
+                </div>
+              ) : (
+                'Confirmar envío'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

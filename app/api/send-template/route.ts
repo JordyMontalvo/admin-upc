@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import axios from 'axios'
+import { connectToDatabase } from '@/lib/db/connection'
+import { getAllContacts, getAllContactsDebug } from '@/lib/db/contacts'
+import dotenv from 'dotenv'
+
+dotenv.config()
 
 const sendTemplateMessage = async (phoneNumberId: string, to: string, templateName: string, languageCode: string, parameters?: string[]) => {
   console.log(`[WHATSAPP] Enviando mensaje de plantilla '${templateName}' a ${to}`)
@@ -31,7 +36,7 @@ const sendTemplateMessage = async (phoneNumberId: string, to: string, templateNa
       },
       {
         headers: {
-          'Authorization': `Bearer EAATOh6iDpxgBPqZAmZC4Vn5rt3SYPgZBY1suzFAfZCpvJOY0a7Rxm1NaqnOHwi1We8Y0e27wnA2cL9S128dbtip6Bt6LinTZClujzyNKzFsggSZADWBrOVXRNZBZBocZCjJhrQLxAiVzZB8tfDPxrWcOiMCnYsdDzFqZAjeEviQQf6qRR97eygomljd8JJZB5IwdoiyamIakFfHvUK8KLeGk5MR2ZCObHSZCwZAyGfcMD2JzmoQBcuokKZBEqpT00DUy91A8afkZD`,
+          'Authorization': `Bearer EAATOh6iDpxgBPtBfFKqFhp1v1iMPYdOoG4Hd0uHxhQEvETX2LvpxpOnQwEDno5qbMJHS5CDx9K8OwZBj57ZAqcLixXcZAZCcQeB2TJfrKPG9gCEozZBBCaVCvMOKnwcbcuRtXpZCXVi7DEta74dw4lo3QBX0oXRS7Km4KpT1uMNjBR3clKjjf8WIddP9uZBBUf2lq6XISs6ZCF8Sa7CH`,
           'Content-Type': 'application/json'
         }
       }
@@ -51,21 +56,57 @@ export async function POST(request: NextRequest) {
   console.log('[API] Recibida solicitud POST a /api/send-template')
 
   try {
-    const body = await request.json()
-    console.log('[API] Body recibido:', body)
+    // Conectar a la base de datos
+    await connectToDatabase()
+    console.log('[API] Conectado a la base de datos')
 
-    const { to } = body
+    // Obtener todos los contactos
+    const contacts = await getAllContacts()
+    console.log(`[API] Encontrados ${contacts.length} contactos totales`)
+
+    // Debug: obtener todos los contactos para ver qué hay
+    const allContacts = await getAllContactsDebug()
+    console.log(`[API] Total de contactos en DB (debug): ${allContacts.length}`)
+    console.log('[API] Muestra de contactos:', allContacts.slice(0, 3).map((c: any) => ({
+      phone: c.phoneNumber,
+      registered: c.isRegistered,
+      name: c.name
+    })))
+
+    console.log('[API] Todos los contactos encontrados:', contacts.map((c: any) => ({ phone: c.phoneNumber })))
+
     const phoneNumberId = '847905635065421'
     const templateName = 'recordatorio'
     const languageCode = 'en_US'
-    const parameters: string[] = ['2025-12-31', '10:00 AM']
+    const parameters: string[] = ['Noche UPC', '12 Octubre', '7pm']
 
-    console.log(`[API] Enviando a: ${to || '51993800154'}, Template: ${templateName}, Language: ${languageCode}, Params: ${parameters.join(', ')}`)
+    let successCount = 0
+    let failureCount = 0
+    const results = []
 
-    const result = await sendTemplateMessage(phoneNumberId, to || '51993800154', templateName, languageCode, parameters)
+    // Enviar a cada contacto registrado
+    for (const contact of contacts) {
+      try {
+        console.log(`[API] Enviando a: ${contact.phoneNumber}`)
+        const result = await sendTemplateMessage(phoneNumberId, contact.phoneNumber, templateName, languageCode, parameters)
+        results.push({ phone: contact.phoneNumber, success: true, data: result })
+        successCount++
+      } catch (error: any) {
+        console.error(`[API] Error enviando a ${contact.phoneNumber}:`, error.message)
+        results.push({ phone: contact.phoneNumber, success: false, error: error.message })
+        failureCount++
+      }
 
-    console.log('[API] Respuesta exitosa:', result)
-    return NextResponse.json({ success: true, data: result })
+      // Pequeña pausa para no sobrecargar la API
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+
+    console.log(`[API] Campaña completada: ${successCount} exitosos, ${failureCount} fallidos`)
+    return NextResponse.json({
+      success: true,
+      summary: { total: contacts.length, success: successCount, failure: failureCount },
+      results: results
+    })
   } catch (error: any) {
     console.error('[API] Error en la API:', error.message)
     console.error('[API] Stack:', error.stack)
