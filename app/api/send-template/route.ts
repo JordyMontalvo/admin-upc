@@ -56,9 +56,9 @@ export async function POST(request: NextRequest) {
 
     const { to } = body
     const phoneNumberId = '847905635065421'
-    const templateName = 'hello_world'
+    const templateName = 'recordatorio'
     const languageCode = 'en_US'
-    const parameters: string[] = []
+    const parameters: string[] = ['2025-12-31', '10:00 AM']
 
     console.log(`[API] Enviando a: ${to || '51993800154'}, Template: ${templateName}, Language: ${languageCode}, Params: ${parameters.join(', ')}`)
 
