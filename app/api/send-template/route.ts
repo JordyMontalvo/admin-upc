@@ -56,6 +56,9 @@ export async function POST(request: NextRequest) {
   console.log('[API] Recibida solicitud POST a /api/send-template')
 
   try {
+    const { eventParams } = await request.json()
+    console.log('[API] Body recibido:', { eventParams })
+
     // Conectar a la base de datos
     await connectToDatabase()
     console.log('[API] Conectado a la base de datos')
@@ -78,7 +81,7 @@ export async function POST(request: NextRequest) {
     const phoneNumberId = '847905635065421'
     const templateName = 'recordatorio'
     const languageCode = 'en_US'
-    const parameters: string[] = ['Noche UPC', '12 Octubre', '7pm']
+    const parameters: string[] = eventParams || ['Noche UPC', '12 Octubre', '7pm']
 
     let successCount = 0
     let failureCount = 0

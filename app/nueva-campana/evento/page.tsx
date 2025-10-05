@@ -33,10 +33,12 @@ export default function EventCampaignPage() {
   const [isSending, setIsSending] = useState(false)
   const [recipientCount, setRecipientCount] = useState(0)
   const [loadingCount, setLoadingCount] = useState(true)
+  const [events, setEvents] = useState<any[]>([])
+  const [loadingEvents, setLoadingEvents] = useState(true)
 
-  const selectedEventData = cmsEvents.find((event) => event.id === selectedEvent)
+  const selectedEventData = events.find((event: any) => event.id === selectedEvent)
 
-  // Fetch recipient count on component mount
+  // Fetch recipient count and events on component mount
   useEffect(() => {
     const fetchRecipientCount = async () => {
       try {
@@ -52,7 +54,27 @@ export default function EventCampaignPage() {
       }
     }
 
+    const fetchEvents = async () => {
+      try {
+        const response = await fetch('/api/events')
+        if (response.ok) {
+          const data = await response.json()
+          setEvents(data.events || [])
+        }
+      } catch (error) {
+        console.error('Error fetching events:', error)
+        // Fallback to mock data if Contentful fails
+        setEvents([
+          { id: "mock-1", title: "Evento de prueba 1", date: "Fecha por confirmar", time: "Horario por confirmar" },
+          { id: "mock-2", title: "Evento de prueba 2", date: "Fecha por confirmar", time: "Horario por confirmar" }
+        ])
+      } finally {
+        setLoadingEvents(false)
+      }
+    }
+
     fetchRecipientCount()
+    fetchEvents()
   }, [])
 
   const handleTestSend = async () => {
@@ -94,12 +116,23 @@ export default function EventCampaignPage() {
 
     try {
       console.log('[CLIENT] Iniciando envío de campaña a todos los contactos registrados')
+
+      // Preparar parámetros del evento seleccionado
+      let eventParams = ['Noche UPC', '12 Octubre', '7pm'] // Valores por defecto
+      if (selectedEventData) {
+        eventParams = [
+          selectedEventData.title || 'Noche UPC',
+          selectedEventData.date || '12 Octubre',
+          selectedEventData.time || '7pm'
+        ]
+      }
+
       const response = await fetch('/api/send-template', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}), // No necesitamos parámetros específicos
+        body: JSON.stringify({ eventParams }),
       })
 
       console.log('[CLIENT] Respuesta del fetch:', response.status, response.statusText)
@@ -179,19 +212,32 @@ export default function EventCampaignPage() {
                       <SelectValue placeholder="Selecciona un evento del CMS" />
                     </SelectTrigger>
                     <SelectContent>
-                      {cmsEvents.map((event) => (
-                        <SelectItem key={event.id} value={event.id}>
-                          {event.name}
+                      {loadingEvents ? (
+                        <SelectItem value="loading" disabled>
+                          Cargando eventos...
                         </SelectItem>
-                      ))}
+                      ) : events.length > 0 ? (
+                        events.map((event: any) => (
+                          <SelectItem key={event.id} value={event.id}>
+                            {event.title}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="no-events" disabled>
+                          No hay eventos disponibles
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
 
                 {selectedEventData && (
                   <div className="bg-muted p-4 rounded-lg">
-                    <h4 className="font-medium text-foreground mb-2">{selectedEventData.name}</h4>
-                    <p className="text-sm text-muted-foreground">{selectedEventData.description}</p>
+                    <h4 className="font-medium text-foreground mb-2">{selectedEventData.title}</h4>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p><strong>Fecha:</strong> {selectedEventData.date}</p>
+                      <p><strong>Hora:</strong> {selectedEventData.time}</p>
+                    </div>
                   </div>
                 )}
               </CardContent>
