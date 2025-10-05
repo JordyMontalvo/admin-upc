@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import axios from 'axios'
 import { connectToDatabase } from '@/lib/db/connection'
 import { getAllContacts, getAllContactsDebug } from '@/lib/db/contacts'
+import { saveCampaign } from '@/lib/db/campaigns'
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -56,8 +57,8 @@ export async function POST(request: NextRequest) {
   console.log('[API] Recibida solicitud POST a /api/send-template')
 
   try {
-    const { eventParams } = await request.json()
-    console.log('[API] Body recibido:', { eventParams })
+    const { eventParams, campaignName, selectedEvent } = await request.json()
+    console.log('[API] Body recibido:', { eventParams, campaignName, selectedEvent })
 
     // Conectar a la base de datos
     await connectToDatabase()
@@ -105,6 +106,27 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[API] Campaña completada: ${successCount} exitosos, ${failureCount} fallidos`)
+
+    // Guardar la campaña en la base de datos
+    try {
+      const campaignData = {
+        name: campaignName || 'Campaña sin nombre',
+        event: selectedEvent,
+        recipients: successCount,
+        totalContacts: contacts.length,
+        successCount,
+        failureCount,
+        template: 'recordatorio',
+        parameters: parameters
+      };
+
+      await saveCampaign(campaignData);
+      console.log('[API] Campaña guardada en base de datos');
+    } catch (saveError) {
+      console.error('[API] Error guardando campaña:', saveError);
+      // No fallar la respuesta por error de guardado
+    }
+
     return NextResponse.json({
       success: true,
       summary: { total: contacts.length, success: successCount, failure: failureCount },

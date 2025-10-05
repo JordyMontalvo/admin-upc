@@ -132,7 +132,16 @@ export default function EventCampaignPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ eventParams }),
+        body: JSON.stringify({
+          eventParams,
+          campaignName,
+          selectedEvent: selectedEventData ? {
+            id: selectedEventData.id,
+            title: selectedEventData.title,
+            date: selectedEventData.date,
+            time: selectedEventData.time
+          } : null
+        }),
       })
 
       console.log('[CLIENT] Respuesta del fetch:', response.status, response.statusText)

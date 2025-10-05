@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Eye, MessageSquare, Users, TrendingUp } from "lucide-react"
 import { CampaignResults } from "@/components/campaign-results"
 
-// Mock data for campaigns
+// Mock data for campaigns (fallback)
 const mockCampaigns = [
   {
     id: 1,
@@ -42,7 +42,10 @@ const mockCampaigns = [
 ]
 
 export default function CampaignsPage() {
-  const [selectedCampaign, setSelectedCampaign] = useState<number | null>(null)
+  const [selectedCampaign, setSelectedCampaign] = useState<any>(null)
+  const [campaigns, setCampaigns] = useState<any[]>([])
+  const [campaignStats, setCampaignStats] = useState<any>({ totalCampaigns: 0, totalMessages: 0 })
+  const [loading, setLoading] = useState(true)
 
   const handleViewDetails = (campaignId: number) => {
     setSelectedCampaign(campaignId)
@@ -52,8 +55,35 @@ export default function CampaignsPage() {
     setSelectedCampaign(null)
   }
 
+  // Load campaigns on component mount
+  useEffect(() => {
+    const loadCampaigns = async () => {
+      try {
+        const response = await fetch('/api/campaigns')
+        if (response.ok) {
+          const data = await response.json()
+          setCampaigns(data.campaigns || [])
+          setCampaignStats(data.stats || { totalCampaigns: 0, totalMessages: 0 })
+        } else {
+          // Fallback to mock data if API fails
+          setCampaigns(mockCampaigns)
+          setCampaignStats({ totalCampaigns: mockCampaigns.length, totalMessages: 4200 })
+        }
+      } catch (error) {
+        console.error('Error loading campaigns:', error)
+        // Fallback to mock data
+        setCampaigns(mockCampaigns)
+        setCampaignStats({ totalCampaigns: mockCampaigns.length, totalMessages: 4200 })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadCampaigns()
+  }, [])
+
   if (selectedCampaign) {
-    const campaign = mockCampaigns.find((c) => c.id === selectedCampaign)
+    const campaign = campaigns.find((c: any) => c._id === selectedCampaign._id) || selectedCampaign
     return <CampaignResults campaign={campaign} onClose={handleCloseResults} />
   }
 
@@ -74,7 +104,7 @@ export default function CampaignsPage() {
                 <MessageSquare className="w-5 h-5 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Total Enviados</p>
-                  <p className="text-2xl font-bold text-foreground">4,200</p>
+                  <p className="text-2xl font-bold text-foreground">{campaignStats.totalMessages?.toLocaleString() || '0'}</p>
                 </div>
               </div>
             </CardContent>
@@ -137,38 +167,52 @@ export default function CampaignsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {mockCampaigns.map((campaign) => (
-                    <tr key={campaign.id} className="border-b border-border/50">
-                      <td className="py-4 px-4">
-                        <div className="font-medium text-foreground">{campaign.name}</div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <Badge
-                          variant={campaign.type === "Evento" ? "default" : "secondary"}
-                          className={campaign.type === "Evento" ? "bg-primary text-primary-foreground" : ""}
-                        >
-                          {campaign.type}
-                        </Badge>
-                      </td>
-                      <td className="py-4 px-4 text-muted-foreground">
-                        {new Date(campaign.sendDate).toLocaleDateString("es-ES")}
-                      </td>
-                      <td className="py-4 px-4 text-foreground font-medium">{campaign.sent.toLocaleString()}</td>
-                      <td className="py-4 px-4 text-foreground font-medium">{campaign.read.toLocaleString()}</td>
-                      <td className="py-4 px-4 text-foreground font-medium">{campaign.interactions}</td>
-                      <td className="py-4 px-4">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetails(campaign.id)}
-                          className="text-primary hover:text-primary hover:bg-primary/10"
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          Ver detalles
-                        </Button>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                        Cargando campañas...
                       </td>
                     </tr>
-                  ))}
+                  ) : campaigns.length > 0 ? (
+                    campaigns.map((campaign: any) => (
+                      <tr key={campaign._id} className="border-b border-border/50">
+                        <td className="py-4 px-4">
+                          <div className="font-medium text-foreground">{campaign.name}</div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <Badge
+                            variant="default"
+                            className="bg-primary text-primary-foreground"
+                          >
+                            Evento
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-4 text-muted-foreground">
+                          {new Date(campaign.sentAt || campaign.createdAt).toLocaleDateString("es-ES")}
+                        </td>
+                        <td className="py-4 px-4 text-foreground font-medium">{campaign.recipients?.toLocaleString() || '0'}</td>
+                        <td className="py-4 px-4 text-foreground font-medium">-</td>
+                        <td className="py-4 px-4 text-foreground font-medium">-</td>
+                        <td className="py-4 px-4">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewDetails(campaign)}
+                            className="text-primary hover:text-primary hover:bg-primary/10"
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            Ver detalles
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                        No hay campañas enviadas aún
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
