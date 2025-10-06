@@ -116,7 +116,7 @@ export default function CampaignsPage() {
                 <Eye className="w-5 h-5 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Mensajes Leídos</p>
-                  <p className="text-2xl font-bold text-foreground">3,590</p>
+                  <p className="text-2xl font-bold text-foreground">0</p>
                 </div>
               </div>
             </CardContent>
@@ -128,7 +128,7 @@ export default function CampaignsPage() {
                 <TrendingUp className="w-5 h-5 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Interacciones</p>
-                  <p className="text-2xl font-bold text-foreground">479</p>
+                  <p className="text-2xl font-bold text-foreground">0</p>
                 </div>
               </div>
             </CardContent>
@@ -140,7 +140,7 @@ export default function CampaignsPage() {
                 <Users className="w-5 h-5 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Tasa de Lectura</p>
-                  <p className="text-2xl font-bold text-foreground">85.5%</p>
+                  <p className="text-2xl font-bold text-foreground">0%</p>
                 </div>
               </div>
             </CardContent>

@@ -37,7 +37,7 @@ const sendTemplateMessage = async (phoneNumberId: string, to: string, templateNa
       },
       {
         headers: {
-          'Authorization': `Bearer EAATOh6iDpxgBPtBfFKqFhp1v1iMPYdOoG4Hd0uHxhQEvETX2LvpxpOnQwEDno5qbMJHS5CDx9K8OwZBj57ZAqcLixXcZAZCcQeB2TJfrKPG9gCEozZBBCaVCvMOKnwcbcuRtXpZCXVi7DEta74dw4lo3QBX0oXRS7Km4KpT1uMNjBR3clKjjf8WIddP9uZBBUf2lq6XISs6ZCF8Sa7CH`,
+          'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}`,
           'Content-Type': 'application/json'
         }
       }
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     console.log('[API] Todos los contactos encontrados:', contacts.map((c: any) => ({ phone: c.phoneNumber })))
 
-    const phoneNumberId = '847905635065421'
+    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || '847905635065421'
     const templateName = 'recordatorio'
     const languageCode = 'en_US'
     const parameters: string[] = eventParams || ['Noche UPC', '12 Octubre', '7pm']
