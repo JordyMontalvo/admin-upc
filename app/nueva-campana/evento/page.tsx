@@ -35,6 +35,7 @@ export default function EventCampaignPage() {
   const [loadingCount, setLoadingCount] = useState(true)
   const [events, setEvents] = useState<any[]>([])
   const [loadingEvents, setLoadingEvents] = useState(true)
+  const [isTestSending, setIsTestSending] = useState(false)
 
   const selectedEventData = events.find((event: any) => event.id === selectedEvent)
 
@@ -78,6 +79,7 @@ export default function EventCampaignPage() {
   }, [])
 
   const handleTestSend = async () => {
+    setIsTestSending(true)
     console.log('[CLIENT] Iniciando envío de prueba')
     try {
       console.log('[CLIENT] Enviando fetch a /api/send-template')
@@ -104,6 +106,8 @@ export default function EventCampaignPage() {
     } catch (error) {
       console.error('[CLIENT] Error en el fetch:', error)
       alert('Error al enviar mensaje de prueba: ' + (error instanceof Error ? error.message : String(error)))
+    } finally {
+      setIsTestSending(false)
     }
   }
 
@@ -278,12 +282,21 @@ export default function EventCampaignPage() {
               <CardContent className="space-y-3">
                 <Button
                   variant="outline"
-                  className="w-full bg-transparent"
+                  className="w-full bg-transparent cursor-pointer"
                   onClick={handleTestSend}
-                  disabled={!campaignName || !selectedEvent}
+                  disabled={!campaignName || !selectedEvent || isTestSending}
                 >
-                  <TestTube className="w-4 h-4 mr-2" />
-                  Enviar prueba
+                  {isTestSending ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                      <span>Enviando...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <TestTube className="w-4 h-4 mr-2" />
+                      Enviar prueba
+                    </>
+                  )}
                 </Button>
                 <Button className="w-full" onClick={handleSendCampaign} disabled={!campaignName || !selectedEvent}>
                   <Send className="w-4 h-4 mr-2" />
