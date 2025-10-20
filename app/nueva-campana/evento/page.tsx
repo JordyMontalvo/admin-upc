@@ -298,7 +298,7 @@ export default function EventCampaignPage() {
                     </>
                   )}
                 </Button>
-                <Button className="w-full" onClick={handleSendCampaign} disabled={!campaignName || !selectedEvent}>
+                <Button className="w-full cursor-pointer" onClick={handleSendCampaign} disabled={!campaignName || !selectedEvent}>
                   <Send className="w-4 h-4 mr-2" />
                   Enviar campaña
                 </Button>

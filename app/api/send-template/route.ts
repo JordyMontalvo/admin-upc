@@ -57,27 +57,40 @@ export async function POST(request: NextRequest) {
   console.log('[API] Recibida solicitud POST a /api/send-template')
 
   try {
-    const { eventParams, campaignName, selectedEvent } = await request.json()
-    console.log('[API] Body recibido:', { eventParams, campaignName, selectedEvent })
+    const { eventParams, campaignName, selectedEvent, to } = await request.json()
+    console.log('[API] Body recibido:', { eventParams, campaignName, selectedEvent, to })
+    
+    // Verificar si es una prueba (cuando se envía 'to')
+    const isTest = !!to
+    console.log('[API] Es prueba:', isTest)
 
-    // Conectar a la base de datos
-    await connectToDatabase()
-    console.log('[API] Conectado a la base de datos')
+    // Conectar a la base de datos solo si no es prueba
+    if (!isTest) {
+      await connectToDatabase()
+      console.log('[API] Conectado a la base de datos')
+    }
 
-    // Obtener todos los contactos
-    const contacts = await getAllContacts()
-    console.log(`[API] Encontrados ${contacts.length} contactos totales`)
+    let contacts = []
+    if (isTest) {
+      // Para pruebas, usar solo el número especificado
+      contacts = [{ phoneNumber: to }]
+      console.log(`[API] Modo prueba: enviando solo a ${to}`)
+    } else {
+      // Obtener todos los contactos para campaña real
+      contacts = await getAllContacts()
+      console.log(`[API] Encontrados ${contacts.length} contactos totales`)
 
-    // Debug: obtener todos los contactos para ver qué hay
-    const allContacts = await getAllContactsDebug()
-    console.log(`[API] Total de contactos en DB (debug): ${allContacts.length}`)
-    console.log('[API] Muestra de contactos:', allContacts.slice(0, 3).map((c: any) => ({
-      phone: c.phoneNumber,
-      registered: c.isRegistered,
-      name: c.name
-    })))
+      // Debug: obtener todos los contactos para ver qué hay
+      const allContacts = await getAllContactsDebug()
+      console.log(`[API] Total de contactos en DB (debug): ${allContacts.length}`)
+      console.log('[API] Muestra de contactos:', allContacts.slice(0, 3).map((c: any) => ({
+        phone: c.phoneNumber,
+        registered: c.isRegistered,
+        name: c.name
+      })))
 
-    console.log('[API] Todos los contactos encontrados:', contacts.map((c: any) => ({ phone: c.phoneNumber })))
+      console.log('[API] Todos los contactos encontrados:', contacts.map((c: any) => ({ phone: c.phoneNumber })))
+    }
 
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || '847905635065421'
     const templateName = 'recordatorio'
@@ -105,26 +118,30 @@ export async function POST(request: NextRequest) {
       await new Promise(resolve => setTimeout(resolve, 100))
     }
 
-    console.log(`[API] Campaña completada: ${successCount} exitosos, ${failureCount} fallidos`)
+    console.log(`[API] ${isTest ? 'Prueba' : 'Campaña'} completada: ${successCount} exitosos, ${failureCount} fallidos`)
 
-    // Guardar la campaña en la base de datos
-    try {
-      const campaignData = {
-        name: campaignName || 'Campaña sin nombre',
-        event: selectedEvent,
-        recipients: successCount,
-        totalContacts: contacts.length,
-        successCount,
-        failureCount,
-        template: 'recordatorio',
-        parameters: parameters
-      };
+    // Guardar la campaña en la base de datos solo si NO es una prueba
+    if (!isTest) {
+      try {
+        const campaignData = {
+          name: campaignName || 'Campaña sin nombre',
+          event: selectedEvent,
+          recipients: successCount,
+          totalContacts: contacts.length,
+          successCount,
+          failureCount,
+          template: 'recordatorio',
+          parameters: parameters
+        };
 
-      await saveCampaign(campaignData);
-      console.log('[API] Campaña guardada en base de datos');
-    } catch (saveError) {
-      console.error('[API] Error guardando campaña:', saveError);
-      // No fallar la respuesta por error de guardado
+        await saveCampaign(campaignData);
+        console.log('[API] Campaña guardada en base de datos');
+      } catch (saveError) {
+        console.error('[API] Error guardando campaña:', saveError);
+        // No fallar la respuesta por error de guardado
+      }
+    } else {
+      console.log('[API] Prueba completada - no se guardó en base de datos');
     }
 
     return NextResponse.json({
