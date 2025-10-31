@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -28,8 +28,29 @@ export default function CustomCampaignPage() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [recipientCount, setRecipientCount] = useState(0)
+  const [loadingCount, setLoadingCount] = useState(true)
 
   const maxCharacters = 1000
+
+  // Fetch recipient count on component mount
+  useEffect(() => {
+    const fetchRecipientCount = async () => {
+      try {
+        const response = await fetch('/api/contacts/count')
+        if (response.ok) {
+          const data = await response.json()
+          setRecipientCount(data.totalContacts || 0)
+        }
+      } catch (error) {
+        console.error('Error fetching recipient count:', error)
+      } finally {
+        setLoadingCount(false)
+      }
+    }
+
+    fetchRecipientCount()
+  }, [])
 
   const handleTestSend = () => {
     console.log("Enviando mensaje de prueba personalizado...")
@@ -39,10 +60,25 @@ export default function CustomCampaignPage() {
     setShowConfirmDialog(true)
   }
 
-  const confirmSendCampaign = () => {
+  const confirmSendCampaign = async () => {
     setShowConfirmDialog(false)
-    const recipientCount = 2450
-    router.push(`/campana-enviada?recipients=${recipientCount}&name=${encodeURIComponent(campaignName)}`)
+    
+    // Obtener el conteo real de contactos antes de enviar
+    try {
+      const response = await fetch('/api/contacts/count')
+      if (response.ok) {
+        const data = await response.json()
+        const actualCount = data.totalContacts || 0
+        router.push(`/campana-enviada?recipients=${actualCount}&name=${encodeURIComponent(campaignName)}`)
+      } else {
+        // Si falla, usar el contador del estado
+        router.push(`/campana-enviada?recipients=${recipientCount}&name=${encodeURIComponent(campaignName)}`)
+      }
+    } catch (error) {
+      console.error('Error fetching recipient count:', error)
+      // Si falla, usar el contador del estado
+      router.push(`/campana-enviada?recipients=${recipientCount}&name=${encodeURIComponent(campaignName)}`)
+    }
   }
 
   const insertFormatting = (format: string) => {
@@ -324,7 +360,13 @@ Enlaces: https://ejemplo.com"
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Destinatarios:</span>
-                  <span className="font-medium">2,450 usuarios</span>
+                  <span className="font-medium">
+                    {loadingCount ? (
+                      'Cargando...'
+                    ) : (
+                      `${recipientCount.toLocaleString()} ${recipientCount === 1 ? 'usuario' : 'usuarios'}`
+                    )}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Costo estimado:</span>
@@ -371,7 +413,7 @@ Enlaces: https://ejemplo.com"
           <DialogHeader>
             <DialogTitle>Confirmar envío de campaña</DialogTitle>
             <DialogDescription>
-              ¿Estás seguro de que deseas enviar la campaña "{campaignName}" a 2,450 usuarios registrados? Esta acción
+              ¿Estás seguro de que deseas enviar la campaña "{campaignName}" a {recipientCount.toLocaleString()} {recipientCount === 1 ? 'usuario registrado' : 'usuarios registrados'}? Esta acción
               no se puede deshacer.
             </DialogDescription>
           </DialogHeader>
