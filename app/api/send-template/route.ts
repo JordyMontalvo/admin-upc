@@ -7,8 +7,10 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
-const sendTemplateMessage = async (phoneNumberId: string, to: string, templateName: string, languageCode: string, parameters?: string[]) => {
+const sendTemplateMessage = async (phoneNumberId: string, to: string, templateName: string, languageCode: string, parameters?: string[], linkUrl?: string) => {
   console.log(`[WHATSAPP] Enviando mensaje de plantilla '${templateName}' a ${to}`)
+  console.log(`[WHATSAPP] Parámetros:`, parameters)
+  console.log(`[WHATSAPP] Enlace:`, linkUrl || 'No hay enlace')
 
   const template: any = {
     name: templateName,
@@ -17,13 +19,43 @@ const sendTemplateMessage = async (phoneNumberId: string, to: string, templateNa
     }
   }
 
+  template.components = []
+
+  // Preparar parámetros del cuerpo
   if (parameters && parameters.length > 0) {
-    template.components = [
-      {
-        type: 'body',
-        parameters: parameters.map(param => ({ type: 'text', text: param }))
-      }
-    ]
+    // Si hay enlace, agregarlo al último parámetro
+    const bodyParams = [...parameters]
+    if (linkUrl) {
+      // Agregar el enlace al final del último parámetro (hora)
+      const lastParamIndex = bodyParams.length - 1
+      bodyParams[lastParamIndex] = `${bodyParams[lastParamIndex]}\n\n🔗 Más información: ${linkUrl}`
+    }
+    
+    template.components.push({
+      type: 'body',
+      parameters: bodyParams.map(param => ({ type: 'text', text: param }))
+    })
+  } else if (linkUrl) {
+    // Si no hay parámetros pero sí hay enlace, crear un componente body solo con el enlace
+    template.components.push({
+      type: 'body',
+      parameters: [{ type: 'text', text: `🔗 ${linkUrl}` }]
+    })
+  }
+
+  // También agregar botón con enlace si se proporciona (requiere que el template tenga botón configurado en WhatsApp Business Manager)
+  if (linkUrl) {
+    template.components.push({
+      type: 'button',
+      sub_type: 'url',
+      index: 0,
+      parameters: [
+        {
+          type: 'text',
+          text: linkUrl
+        }
+      ]
+    })
   }
 
   try {
@@ -57,8 +89,8 @@ export async function POST(request: NextRequest) {
   console.log('[API] Recibida solicitud POST a /api/send-template')
 
   try {
-    const { eventParams, campaignName, selectedEvent, to } = await request.json()
-    console.log('[API] Body recibido:', { eventParams, campaignName, selectedEvent, to })
+    const { eventParams, campaignName, selectedEvent, to, linkUrl } = await request.json()
+    console.log('[API] Body recibido:', { eventParams, campaignName, selectedEvent, to, linkUrl })
     
     // Verificar si es una prueba (cuando se envía 'to')
     const isTest = !!to
@@ -101,11 +133,17 @@ export async function POST(request: NextRequest) {
     let failureCount = 0
     const results = []
 
+    // Obtener URL del enlace del evento o usar un valor por defecto
+    const eventLink = linkUrl || selectedEvent?.link || selectedEvent?.url || null
+    console.log('[API] URL del evento:', eventLink)
+    console.log('[API] Parámetros del evento:', parameters)
+    console.log('[API] Enlace que se incluirá en el mensaje:', eventLink || 'Ninguno')
+
     // Enviar a cada contacto registrado
     for (const contact of contacts) {
       try {
         console.log(`[API] Enviando a: ${contact.phoneNumber}`)
-        const result = await sendTemplateMessage(phoneNumberId, contact.phoneNumber, templateName, languageCode, parameters)
+        const result = await sendTemplateMessage(phoneNumberId, contact.phoneNumber, templateName, languageCode, parameters, eventLink)
         results.push({ phone: contact.phoneNumber, success: true, data: result })
         successCount++
       } catch (error: any) {

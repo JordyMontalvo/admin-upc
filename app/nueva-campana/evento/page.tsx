@@ -29,6 +29,7 @@ export default function EventCampaignPage() {
   const router = useRouter()
   const [selectedEvent, setSelectedEvent] = useState("")
   const [campaignName, setCampaignName] = useState("")
+  const [customLink, setCustomLink] = useState("")
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [recipientCount, setRecipientCount] = useState(0)
@@ -82,13 +83,31 @@ export default function EventCampaignPage() {
     setIsTestSending(true)
     console.log('[CLIENT] Iniciando envío de prueba')
     try {
-      console.log('[CLIENT] Enviando fetch a /api/send-template')
+      // Preparar datos de prueba con enlace
+      let testParams = ['Noche UPC', '12 Octubre', '7pm']
+      let testLink = customLink.trim() || 'https://ejemplo.com/evento-prueba'
+      
+      if (selectedEventData) {
+        testParams = [
+          selectedEventData.title || 'Noche UPC',
+          selectedEventData.date || '12 Octubre',
+          selectedEventData.time || '7pm'
+        ]
+        testLink = customLink.trim() || selectedEventData.link || selectedEventData.url || 'https://ejemplo.com/evento-prueba'
+      }
+      
+      console.log('[CLIENT] Enviando prueba con:', { eventParams: testParams, linkUrl: testLink })
+      
       const response = await fetch('/api/send-template', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ to: '51993800154' }), // Número de prueba
+        body: JSON.stringify({ 
+          to: '51993800154', // Número de prueba
+          eventParams: testParams,
+          linkUrl: testLink
+        }),
       })
 
       console.log('[CLIENT] Respuesta del fetch:', response.status, response.statusText)
@@ -97,7 +116,7 @@ export default function EventCampaignPage() {
       console.log('[CLIENT] Resultado JSON:', result)
 
       if (result.success) {
-        alert('Mensaje de prueba enviado exitosamente')
+        alert(`✅ Mensaje de prueba enviado exitosamente!\n\nEl mensaje incluye:\n- Evento: ${testParams[0]}\n- Fecha: ${testParams[1]}\n- Hora: ${testParams[2]}\n- Enlace: ${testLink}`)
         console.log('Resultado:', result.data)
       } else {
         alert('Error al enviar mensaje de prueba: ' + result.error)
@@ -123,12 +142,19 @@ export default function EventCampaignPage() {
 
       // Preparar parámetros del evento seleccionado
       let eventParams = ['Noche UPC', '12 Octubre', '7pm'] // Valores por defecto
+      let eventLink = null
+      
       if (selectedEventData) {
         eventParams = [
           selectedEventData.title || 'Noche UPC',
           selectedEventData.date || '12 Octubre',
           selectedEventData.time || '7pm'
         ]
+        // Prioridad: link personalizado > link del evento > null
+        eventLink = customLink.trim() || selectedEventData.link || selectedEventData.url || null
+      } else {
+        // Si no hay evento seleccionado, usar el link personalizado
+        eventLink = customLink.trim() || null
       }
 
       const response = await fetch('/api/send-template', {
@@ -139,11 +165,14 @@ export default function EventCampaignPage() {
         body: JSON.stringify({
           eventParams,
           campaignName,
+          linkUrl: eventLink,
           selectedEvent: selectedEventData ? {
             id: selectedEventData.id,
             title: selectedEventData.title,
             date: selectedEventData.date,
-            time: selectedEventData.time
+            time: selectedEventData.time,
+            link: selectedEventData.link,
+            url: selectedEventData.url
           } : null
         }),
       })
@@ -250,9 +279,34 @@ export default function EventCampaignPage() {
                     <div className="text-sm text-muted-foreground space-y-1">
                       <p><strong>Fecha:</strong> {selectedEventData.date}</p>
                       <p><strong>Hora:</strong> {selectedEventData.time}</p>
+                      {selectedEventData.link && (
+                        <p><strong>Enlace:</strong> <a href={selectedEventData.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{selectedEventData.link}</a></p>
+                      )}
                     </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Link Personalizado */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Enlace del Evento (Opcional)</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="custom-link">URL del evento</Label>
+                  <Input
+                    id="custom-link"
+                    type="url"
+                    placeholder="https://ejemplo.com/evento"
+                    value={customLink}
+                    onChange={(e) => setCustomLink(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Si el evento tiene un enlace, se agregará como botón en el mensaje. Si no especificas uno y el evento del CMS tiene un enlace, se usará ese.
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
