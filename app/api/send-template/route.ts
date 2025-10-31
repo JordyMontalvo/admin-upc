@@ -7,6 +7,36 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
+// Función para enviar mensaje de texto
+const sendTextMessage = async (phoneNumberId: string, to: string, text: string) => {
+  try {
+    const response = await axios.post(
+      `https://graph.facebook.com/v23.0/${phoneNumberId}/messages`,
+      {
+        messaging_product: 'whatsapp',
+        to: to,
+        type: 'text',
+        text: {
+          body: text
+        }
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    )
+    console.log(`[WHATSAPP] ✅ Mensaje de texto enviado exitosamente a ${to}`)
+    return response.data
+  } catch (error: any) {
+    console.error('❌ Error al enviar mensaje de texto:')
+    console.error('Status:', error.response?.status)
+    console.error('Data:', error.response?.data)
+    throw error
+  }
+}
+
 const sendTemplateMessage = async (phoneNumberId: string, to: string, templateName: string, languageCode: string, parameters?: string[], linkUrl?: string) => {
   console.log(`[WHATSAPP] Enviando mensaje de plantilla '${templateName}' a ${to}`)
   console.log(`[WHATSAPP] Parámetros:`, parameters)
@@ -23,23 +53,10 @@ const sendTemplateMessage = async (phoneNumberId: string, to: string, templateNa
 
   // Preparar parámetros del cuerpo
   if (parameters && parameters.length > 0) {
-    // Si hay enlace, agregarlo al último parámetro
-    const bodyParams = [...parameters]
-    if (linkUrl) {
-      // Agregar el enlace al final del último parámetro (hora)
-      const lastParamIndex = bodyParams.length - 1
-      bodyParams[lastParamIndex] = `${bodyParams[lastParamIndex]}\n\n🔗 Más información: ${linkUrl}`
-    }
-    
+    // Los parámetros se usan tal cual, sin modificar (WhatsApp no permite saltos de línea en parámetros)
     template.components.push({
       type: 'body',
-      parameters: bodyParams.map(param => ({ type: 'text', text: param }))
-    })
-  } else if (linkUrl) {
-    // Si no hay parámetros pero sí hay enlace, crear un componente body solo con el enlace
-    template.components.push({
-      type: 'body',
-      parameters: [{ type: 'text', text: `🔗 ${linkUrl}` }]
+      parameters: parameters.map(param => ({ type: 'text', text: param }))
     })
   }
 
@@ -76,6 +93,22 @@ const sendTemplateMessage = async (phoneNumberId: string, to: string, templateNa
     )
 
     console.log(`[WHATSAPP] ✅ Mensaje de plantilla enviado exitosamente a ${to}`)
+    
+    // Si hay enlace, enviar un mensaje de texto adicional con el enlace
+    if (linkUrl) {
+      try {
+        // Pequeña pausa antes de enviar el mensaje de texto
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        const linkMessage = `🔗 Más información: ${linkUrl}`
+        await sendTextMessage(phoneNumberId, to, linkMessage)
+        console.log(`[WHATSAPP] ✅ Enlace enviado como mensaje adicional a ${to}`)
+      } catch (linkError: any) {
+        console.error(`[WHATSAPP] ⚠️  Error al enviar enlace adicional (mensaje template enviado):`, linkError.message)
+        // No fallar si el mensaje de enlace falla, el template ya se envió
+      }
+    }
+    
     return response.data
   } catch (error: any) {
     console.error('❌ Error al enviar mensaje de plantilla:')
