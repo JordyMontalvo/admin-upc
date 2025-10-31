@@ -60,20 +60,8 @@ const sendTemplateMessage = async (phoneNumberId: string, to: string, templateNa
     })
   }
 
-  // También agregar botón con enlace si se proporciona (requiere que el template tenga botón configurado en WhatsApp Business Manager)
-  if (linkUrl) {
-    template.components.push({
-      type: 'button',
-      sub_type: 'url',
-      index: 0,
-      parameters: [
-        {
-          type: 'text',
-          text: linkUrl
-        }
-      ]
-    })
-  }
+  // NO agregamos botones porque el template 'recordatorio' no tiene botones configurados
+  // El enlace se enviará como mensaje de texto adicional después del template
 
   try {
     const response = await axios.post(
