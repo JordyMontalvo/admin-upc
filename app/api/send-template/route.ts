@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import axios from 'axios'
 import { connectToDatabase } from '@/lib/db/connection'
-import { getAllContacts, getAllContactsDebug } from '@/lib/db/contacts'
+import { getAllContacts, getAllContactsDebug, getActiveContacts } from '@/lib/db/contacts'
 import { saveCampaign } from '@/lib/db/campaigns'
 import dotenv from 'dotenv'
 
@@ -129,20 +129,24 @@ export async function POST(request: NextRequest) {
       contacts = [{ phoneNumber: to }]
       console.log(`[API] Modo prueba: enviando solo a ${to}`)
     } else {
-      // Obtener todos los contactos para campaña real
-      contacts = await getAllContacts()
-      console.log(`[API] Encontrados ${contacts.length} contactos totales`)
+      // Obtener solo contactos activos (que NO se han dado de baja) para campaña real
+      contacts = await getActiveContacts()
+      console.log(`[API] Encontrados ${contacts.length} contactos activos (sin opt-out)`)
 
       // Debug: obtener todos los contactos para ver qué hay
       const allContacts = await getAllContactsDebug()
+      const activeCount = await getActiveContacts()
       console.log(`[API] Total de contactos en DB (debug): ${allContacts.length}`)
+      console.log(`[API] Contactos activos (sin opt-out): ${activeCount.length}`)
+      console.log(`[API] Contactos dados de baja: ${allContacts.length - activeCount.length}`)
       console.log('[API] Muestra de contactos:', allContacts.slice(0, 3).map((c: any) => ({
         phone: c.phoneNumber,
         registered: c.isRegistered,
+        optedOut: c.optedOut || false,
         name: c.name
       })))
 
-      console.log('[API] Todos los contactos encontrados:', contacts.map((c: any) => ({ phone: c.phoneNumber })))
+      console.log('[API] Contactos activos que recibirán la campaña:', contacts.map((c: any) => ({ phone: c.phoneNumber })))
     }
 
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || '847905635065421'
