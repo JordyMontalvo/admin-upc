@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || '847905635065421'
     
     // Mensaje de confirmación
-    const confirmationMessage = `📢 *Confirmación de suscripción*\n\nHola! 👋\n\nQueremos confirmar si deseas seguir recibiendo información sobre eventos culturales y campañas de la UPC.\n\nSi quieres *seguir recibiendo* mensajes, escribe:\n✅ *activar* o *reactivarse*\n\nSi *no deseas* seguir recibiendo mensajes, escribe:\n❌ *darse de baja* o *baja*\n\nTu respuesta es importante para nosotros. 😊`
+    const confirmationMessage = `📢 *Confirmación de suscripción*\n\nHola! 👋\n\nQueremos confirmar si deseas seguir recibiendo información sobre eventos culturales y campañas de la UPC.\n\nSi *no deseas* seguir recibiendo mensajes, escribe:\n❌ *darse de baja* o *baja*\n\nTu respuesta es importante para nosotros. 😊`
 
     let successCount = 0
     let failureCount = 0
