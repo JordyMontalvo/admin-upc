@@ -2,7 +2,8 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Calendar, MessageSquare } from "lucide-react"
+import { ArrowLeft, Calendar } from "lucide-react"
+// import { MessageSquare } from "lucide-react" // Comentado: Mensaje personalizado deshabilitado
 import Link from "next/link"
 
 export default function CampaignTypePage() {
@@ -24,7 +25,7 @@ export default function CampaignTypePage() {
         </div>
 
         {/* Campaign Type Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 gap-6 max-w-2xl mx-auto">
           <Link href="/nueva-campana/evento">
             <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/20">
               <CardHeader className="text-center pb-4">
@@ -55,7 +56,8 @@ export default function CampaignTypePage() {
             </Card>
           </Link>
 
-          <Link href="/nueva-campana/personalizado">
+          {/* Mensaje Personalizado - Comentado temporalmente */}
+          {/* <Link href="/nueva-campana/personalizado">
             <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/20">
               <CardHeader className="text-center pb-4">
                 <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
@@ -83,7 +85,7 @@ export default function CampaignTypePage() {
                 </div>
               </CardContent>
             </Card>
-          </Link>
+          </Link> */}
         </div>
 
         {/* Info Section */}
