@@ -55,11 +55,20 @@ export default function CampaignsPage() {
     setSelectedCampaign(null)
   }
 
-  // Load campaigns on component mount
+  // Load campaigns on component mount and refresh every 5 seconds
   useEffect(() => {
     const loadCampaigns = async () => {
       try {
-        const response = await fetch('/api/campaigns')
+        // Headers para evitar cache y obtener datos en vivo
+        const response = await fetch('/api/campaigns', {
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+          },
+          cache: 'no-store'
+        })
+        
         if (response.ok) {
           const data = await response.json()
           setCampaigns(data.campaigns || [])
@@ -79,7 +88,16 @@ export default function CampaignsPage() {
       }
     }
 
+    // Cargar inmediatamente
     loadCampaigns()
+
+    // Refrescar cada 5 segundos para ver cambios en vivo
+    const interval = setInterval(() => {
+      loadCampaigns()
+    }, 5000)
+
+    // Limpiar intervalo al desmontar
+    return () => clearInterval(interval)
   }, [])
 
   if (selectedCampaign) {
