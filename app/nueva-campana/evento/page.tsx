@@ -93,7 +93,7 @@ export default function EventCampaignPage() {
           selectedEventData.date || '12 Octubre',
           selectedEventData.time || '7pm'
         ]
-        testLink = customLink.trim() || selectedEventData.link || selectedEventData.url || 'https://ejemplo.com/evento-prueba'
+        testLink = customLink.trim() || selectedEventData.link || selectedEventData.url || 'https://cultural.upc.edu.pe/'
       }
       
       console.log('[CLIENT] Enviando prueba con:', { eventParams: testParams, linkUrl: testLink })
@@ -280,7 +280,7 @@ export default function EventCampaignPage() {
                       <p><strong>Fecha:</strong> {selectedEventData.date}</p>
                       <p><strong>Hora:</strong> {selectedEventData.time}</p>
                       {selectedEventData.link && (
-                        <p><strong>Enlace:</strong> <a href={selectedEventData.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{selectedEventData.link}</a></p>
+                        <p><strong>Enlace UPC:</strong> <a href={selectedEventData.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{selectedEventData.link}</a></p>
                       )}
                     </div>
                   </div>
